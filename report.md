@@ -1,9 +1,9 @@
 # Expedia Lite — Part 1
 
 ## Repository and commit
-Repository URL: [PASTE YOUR GITHUB REPOSITORY URL]
+Repository URL: Repository URL: https://github.com/ManzanKid/part1_travel_app
 
-Exact Part 1 commit: [PASTE THE COMMIT HASH AFTER PUSHING]
+Exact Part 1 commit: 3e510471bb23be3891b715117370ff21b112c4cd
 
 ## Implementation
 The Part 1 application uses Vue for the frontend and FastAPI/Python for the backend. The frontend provides a hotel-name search input and Search button. It sends the search term to the FastAPI `/api/search` endpoint. The backend reads the supplied `hotels.csv` and `trips.csv` files using UTF-8-with-BOM-safe CSV loading, matches hotel names case-insensitively, and connects hotel and trip records using `hotel_id`. The API returns the matching stays as JSON. The Vue frontend displays the results in a plain table with the hotel name, location, nightly rate, trip ID, stay name, check-in date, and check-out date. When there are no matches, the frontend displays a clear no-results message.
