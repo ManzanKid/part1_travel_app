@@ -40,7 +40,7 @@ Expected result: A new booking with a unique ID appears in booking history with 
 
 Observed result: I clicked `Book` for `T001` — Boston Harbor Weekend. The application created booking `B007`, displayed a success message, and immediately added `B007` to the booking history with a `Confirmed` status.
 
-![Booking B007 created](docs/screenshots/part2-booking-created.png)
+![Booking B007 created](https://github.com/ManzanKid/part1_travel_app/blob/main/docs/screenshots/part2-booking-created.png?raw=1)
 
 ### Read booking history
 
@@ -58,7 +58,7 @@ Expected result: The booking remains in history, but its status changes from `Co
 
 Observed result: I cancelled `B007`. The booking stayed in the booking history and its status changed from `Confirmed` to `Cancelled`.
 
-![Booking B007 cancelled](docs/screenshots/part2-booking-cancelled.png)
+![Booking B007 cancelled](https://github.com/ManzanKid/part1_travel_app/blob/main/docs/screenshots/part2-booking-cancelled.png?raw=1)
 
 ### Persistence after browser refresh
 
@@ -84,7 +84,7 @@ Expected result: `B007` disappears from booking history.
 
 Observed result: I deleted `B007` and it disappeared from the booking history. After refreshing the browser, `B007` did not return, confirming that the deletion persisted in SQLite.
 
-![Booking B007 deleted](docs/screenshots/part2-booking-deleted.png)
+![Booking B007 deleted](https://github.com/ManzanKid/part1_travel_app/blob/main/docs/screenshots/part2-booking-deleted.png?raw=1)
 
 ## Demo video
 
