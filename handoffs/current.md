@@ -34,16 +34,12 @@ Verification screenshots are stored in `docs/screenshots/`.
 
 ## Remaining work
 
-Before submission:
+- Push the completed `main` branch to GitHub.
+- Submit `report.md` for Part 2.
 
-- Update `report.md` with the Part 2 implementation and manual verification results.
-- Embed the verification screenshots in `report.md`.
-- Review the feature branch changes.
-- Commit the Part 2 work.
-- Merge the feature branch into `main`.
-- Run a final combined-app check.
-- Push the final Part 2 commit to GitHub.
-- Add the exact Part 2 commit hash to `report.md`.
+## Next task
+
+Push `main` to GitHub and submit the completed Part 2 report.
 
 ## Next task
 

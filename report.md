@@ -6,7 +6,7 @@ Repository URL: https://github.com/ManzanKid/part1_travel_app
 
 Exact Part 1 commit: 3e510471bb23be3891b715117370ff21b112c4cd
 
-Exact Part 2 commit: [ADD FINAL PART 2 COMMIT AFTER MERGE AND PUSH]
+Exact Part 2 commit: fd6b3e5798d47169e6d555b9f44ed38be09d5ee
 
 ## Implementation
 
@@ -102,4 +102,4 @@ Selected prompts: `prompts/`
 
 Current handoff: `handoffs/current.md`
 
-Remaining limitations / next task: The required Part 2 search, booking CRUD, and SQLite persistence checks worked during manual verification. The demo video has been recorded and linked above. The remaining tasks are to complete the final Git review and merge, push the final Part 2 commit, and add the exact Part 2 commit hash to this report.
+Remaining limitations / next task: The required Part 2 search, booking CRUD, SQLite persistence, demo video, and final merged-app verification were completed successfully. The Part 2 implementation was verified on the main branch after the feature branch was merged.
