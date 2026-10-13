@@ -1,66 +1,93 @@
-from pathlib import Path
-import csv
-
-from fastapi import FastAPI, Query
+from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel
 
-app = FastAPI(title="Expedia Lite - Part 1")
+from models.database import initialize_database
+from controllers.database_controller import (
+    search_hotels,
+    get_users,
+    get_booking_history,
+    create_booking,
+    cancel_booking,
+    delete_booking,
+)
+
+
+initialize_database()
+
+app = FastAPI(title="Expedia Lite - Part 2")
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173", "http://127.0.0.1:5173"],
+    allow_origins=[
+        "http://localhost:5173",
+        "http://127.0.0.1:5173",
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-BASE_DIR = Path(__file__).resolve().parent
-DATA_DIR = BASE_DIR / "data"
-HOTELS_CSV = DATA_DIR / "hotels.csv"
-TRIPS_CSV = DATA_DIR / "trips.csv"
 
-
-def read_csv(path: Path):
-    if not path.exists():
-        raise FileNotFoundError(f"Missing data file: {path}")
-    with path.open("r", encoding="utf-8-sig", newline="") as f:
-        return list(csv.DictReader(f))
+class BookingCreate(BaseModel):
+    user_id: str
+    trip_id: str
 
 
 @app.get("/")
 def root():
-    return {"message": "Expedia Lite Part 1 API is running"}
+    return {"message": "Expedia Lite Part 2 API is running"}
 
 
 @app.get("/api/search")
-def search_hotels(hotel_name: str = Query(..., min_length=1)):
-    hotels = read_csv(HOTELS_CSV)
-    trips = read_csv(TRIPS_CSV)
+def api_search(hotel_name: str = Query(..., min_length=1)):
+    results = search_hotels(hotel_name)
 
-    term = hotel_name.strip().lower()
-    matching_hotels = [
-        hotel for hotel in hotels
-        if term in hotel.get("hotel_name", "").lower()
-    ]
+    return {
+        "query": hotel_name,
+        "count": len(results),
+        "results": results,
+    }
 
-    hotel_by_id = {hotel["hotel_id"]: hotel for hotel in matching_hotels}
-    results = []
 
-    for trip in trips:
-        hotel = hotel_by_id.get(trip.get("hotel_id"))
-        if not hotel:
-            continue
+@app.get("/api/users")
+def api_users():
+    return {"users": get_users()}
 
-        results.append({
-            "hotel_id": hotel.get("hotel_id", ""),
-            "hotel_name": hotel.get("hotel_name", ""),
-            "city": hotel.get("city", ""),
-            "state": hotel.get("state", ""),
-            "nightly_rate_usd": hotel.get("nightly_rate_usd", ""),
-            "trip_id": trip.get("trip_id", ""),
-            "trip_name": trip.get("trip_name", ""),
-            "check_in": trip.get("check_in", ""),
-            "check_out": trip.get("check_out", ""),
-        })
 
-    return {"query": hotel_name, "count": len(results), "results": results}
+@app.get("/api/bookings")
+def api_booking_history(user_id: str = Query(..., min_length=1)):
+    bookings = get_booking_history(user_id)
+
+    return {
+        "user_id": user_id,
+        "count": len(bookings),
+        "bookings": bookings,
+    }
+
+
+@app.post("/api/bookings")
+def api_create_booking(booking: BookingCreate):
+    try:
+        return create_booking(
+            booking.user_id,
+            booking.trip_id,
+        )
+    except ValueError as error:
+        raise HTTPException(status_code=400, detail=str(error))
+
+
+@app.patch("/api/bookings/{booking_id}/cancel")
+def api_cancel_booking(booking_id: str):
+    try:
+        return cancel_booking(booking_id)
+    except ValueError as error:
+        raise HTTPException(status_code=404, detail=str(error))
+
+
+@app.delete("/api/bookings/{booking_id}")
+def api_delete_booking(booking_id: str):
+    try:
+        return delete_booking(booking_id)
+    except ValueError as error:
+        raise HTTPException(status_code=404, detail=str(error))
