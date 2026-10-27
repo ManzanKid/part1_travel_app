@@ -1,272 +1,283 @@
-# Expedia Lite — Assignment 2 Part 1 Report
+# Expedia Lite — Revised Assignment 2 Part 2 Report
 
-## Repository and Commit
+## Repository and Implementation
 
-**Repository URL:** https://github.com/ManzanKid/part1_travel_app
+**Repository:** https://github.com/ManzanKid/part1_travel_app
 
-**Branch:** `assignment2-part1`
+**Branch:** `assignment2-part2-rag`
 
-**Exact Assignment 2 Part 1 commit:** e50b16ad9dbacc8e3437e7fa21c63b73ca411872
+**Implementation commit:** `7ccdcfe1ce782d0481a4947cc49b1fb6f698abac
 
-**Verification date:** October 26, 2026
+**Verification date:** October 27, 2026
 
-## 1. Project Overview
+## Project Overview
 
-For Assignment 2 Part 1, I expanded my Expedia Lite application by adding a feature that lets users search for real hotels near a five-digit U.S. ZIP code.
+For Revised Assignment 2 Part 2, I expanded my Expedia Lite application by implementing a business intelligence chatbot using SQL-based Retrieval-Augmented Generation (RAG) and an LLM.
 
-The application uses Geoapify to find the location of the ZIP code and retrieve hotels within a five-kilometer radius. The results appear in a list alongside an interactive Leaflet map.
+The chatbot allows users to ask natural-language questions about locally saved hotels, simulated nightly rates, and room availability.
 
-Users can select hotels from either the list or the map, and the selected hotel updates in both places. I also added input validation, loading messages, and error handling for unsuccessful searches.
+The application sends the question to an LLM to generate a SQL query. The FastAPI backend validates the query and retrieves matching information from SQLite. The retrieved records are then sent to the LLM in a second request to generate an answer grounded in the database.
 
-The original hotel search and simulated SQLite booking functionality from Assignment 1 remain available.
+I preserved the existing hotel discovery map, Geoapify API, Add to Local and Remove from Local functions, and Assignment 1 booking functionality.
 
-## 2. Research and Design
+## Research and Design
 
-Before implementing the feature, I researched Geoapify, Leaflet, and the Google Hotels interface.
+My research focused on using LLMs for SQL generation, safely retrieving SQLite data, and preventing generated answers from containing unsupported information.
 
-My research document is available here:
+I used OpenRouter to access an LLM through the FastAPI backend. I also used the existing SQLite database as the retrieval source instead of implementing a vector database.
 
-[Assignment 2 Part 1 Research and Design](docs/assignment2-part1-research.md)
+**Research document:** [Assignment 2 Part 2 Research](docs/assignment2-part2-research.md)
 
-### Geoapify Places API
+**Early chatbot mockup:**
 
-Source: https://apidocs.geoapify.com/docs/places/
+![Assignment 2 Part 2 Chatbot Mockup](docs/assignment2-part2-chatbot-mockup.svg)
 
-I chose Geoapify because it provides actual hotel locations, coordinates, and addresses. It also supports geographic filtering, which allowed me to request hotels within 5,000 meters of a ZIP code.
+The chatbot was integrated into the existing Vue interface rather than creating a separate application. The final implementation also provides a verification trace showing the generated SQL, validation result, retrieved records, and final answer.
 
-I decided to make these requests through my FastAPI backend so that the Geoapify API key would not be exposed in the frontend.
+The mockup was created during the coding-agent implementation process. Its exact creation order relative to the first chatbot code changes has not been independently established.
 
-### Leaflet
+### Reference Sources
 
-Source: https://leafletjs.com/examples/quick-start/
+- [OpenRouter documentation](https://openrouter.ai/docs)
+- [SQLite documentation](https://www.sqlite.org/docs.html)
+- [FastAPI documentation](https://fastapi.tiangolo.com/)
+- [Vue documentation](https://vuejs.org/)
 
-I used Leaflet because it supports interactive maps, markers, zooming, and user interactions.
+## Implementation
 
-My design connects each hotel in the results list with its corresponding map marker, allowing users to navigate the results using either interface.
+### Local Database
 
-### Google Hotels
+The application uses the SQLite database at `backend/data/expedia_lite.db`.
 
-Source: https://www.google.com/travel/hotels
+The local-storage foundation includes:
 
-I looked at Google Hotels as a design reference. I liked how it displays hotel results alongside a map, making it easier to compare locations. Its reviews, photos, and information about nearby attractions were also useful design ideas.
+- `saved_hotels` for hotel information.
+- `saved_hotel_locations` for searched ZIP associations.
+- `demo_hotel_nights` for nightly rates and room availability.
 
-For this assignment, I focused on implementing the hotel list and map interaction rather than attempting to recreate all of Google Hotels' features.
+Nightly rates and room counts are simulated classroom information and do not represent real hotel bookings or prices.
 
-## 3. Early Mockup
+### Backend RAG Workflow
 
-I created an early mockup before implementing the complete hotel discovery interface.
+The RAG implementation is located in `backend/controllers/hotel_rag_controller.py`.
 
-![Assignment 2 Part 1 Early Mockup](docs/assignment2-part1-mockup.png)
+The chatbot endpoint is:
 
-The mockup showed a ZIP code input near the top, hotel results on the left, and an interactive map on the right.
+`POST /api/chatbot/ask`
 
-My completed implementation follows this general layout. I also added distances from the ZIP code center, a visible five-kilometer search circle, and visual highlighting for the selected hotel.
+The workflow is:
 
-The example information in the mockup was illustrative. The completed application uses real Geoapify results rather than inventing hotel data.
+1. The frontend submits a natural-language question.
+2. The backend sends the question and allowed database schema to the LLM.
+3. The LLM proposes a SQL query.
+4. FastAPI validates the proposed SQL.
+5. The application executes approved read-only SQL against SQLite.
+6. Retrieved records are sent to the LLM in a second request.
+7. The generated answer is returned to the Vue frontend.
 
-## 4. Implementation
+The remote model never directly accesses the SQLite database.
 
-### Backend
+### SQL Security
 
-I continued using Python and FastAPI for the backend.
+The backend restricts generated SQL to permitted read-only queries over approved local hotel tables.
 
-The main files added or modified were:
+The implementation uses bounded queries, read-only SQLite connections, and SQL authorization checks.
 
-- `backend/config.py` — Loads the Geoapify API key from the local `.env` file.
-- `backend/controllers/geoapify_controller.py` — Validates ZIP codes and retrieves their coordinates using Geoapify.
-- `backend/controllers/hotel_discovery_controller.py` — Retrieves nearby hotels from Geoapify Places and processes the results.
-- `backend/main.py` — Provides the API routes for the frontend.
-- `backend/tests/` — Contains automated tests for geocoding, hotel discovery, and API responses.
-
-The main hotel discovery endpoint is:
-
-`GET /api/discovery/hotels?postcode=16802`
-
-The backend first resolves the ZIP code and verifies that Geoapify returned the requested U.S. ZIP. It then requests hotels within 5,000 meters of the resulting coordinates.
-
-I also added checks for invalid coordinates, duplicate hotels, and locations outside the requested radius.
+Unsafe statements, including DELETE, UPDATE, DROP, multiple statements, and unauthorized table access, are rejected.
 
 ### Frontend
 
-The frontend uses Vue and Leaflet.
+The chatbot interface is implemented in `frontend/src/components/HotelChatbot.vue`.
 
-The new `frontend/src/components/HotelDiscovery.vue` component allows users to enter a ZIP code, submit a search, view nearby hotels, and explore their locations on the map.
+Users can enter natural-language questions, submit them, and view generated answers. The interface also handles loading states, unsuccessful requests, and situations where the database contains insufficient information.
 
-Selecting a hotel from the list changes the selected marker on the map. Clicking a map marker also updates the selection in the hotel list.
+A verification trace provides additional information about the backend retrieval process.
 
-The map shows a circle representing the five-kilometer search radius.
+## Startup and Configuration
 
-I also implemented different messages for invalid ZIP codes, unresolved ZIP codes, empty results, and provider failures.
+The application uses a FastAPI backend and Vue frontend.
 
-### API Key Security
+API credentials are stored in the root `.env` file, which is excluded from Git.
 
-The Geoapify API key is stored in a local `.env` file and is loaded by the FastAPI backend.
+Required environment variables include:
 
-I confirmed that Git ignores `.env`, so the API key is not included in the repository.
+- `GEOAPIFY_API_KEY`
+- `OPENROUTER_API_KEY`
+- `OPENROUTER_MODEL`
 
-## 5. Running the Application
+The chatbot was configured to use a free OpenRouter model. The intended model configuration was `nvidia/nemotron-3-ultra-550b-a55b:free`; this should be checked against the final backend runtime configuration.
 
-The application requires Python, Node.js, and a Geoapify API key.
-
-First, create a `.env` file in the project root containing:
-
-`GEOAPIFY_API_KEY=YOUR_API_KEY`
-
-Start the backend from the `backend` directory:
+### Start the backend
 
 ```bash
+cd backend
 source .venv/bin/activate
 pip install -r requirements.txt
 uvicorn main:app --reload --port 8000
 ```
 
-Start the frontend from the `frontend` directory in another terminal:
+### Start the frontend
 
 ```bash
+cd frontend
 npm install
 npm run dev
 ```
 
-Open the application at:
+**Frontend:** http://localhost:5173/
 
-http://localhost:5173/
+**Backend:** http://127.0.0.1:8000/
 
-The Geoapify API key must be configured for live hotel discovery to work.
+## Verification
 
-## 6. Verification and Testing
+### Test 1 — Successful RAG Question
 
-I tested the hotel discovery feature on October 26, 2026, using the running application and backend tests.
+**Question:**
 
-### Live Hotel Search
+Which of my saved hotels in ZIP code 16802 has rooms available from October 10 to October 13, 2026, and what is the total cost for the stay?
 
-**Action:** Enter ZIP code `16802` and click Find Hotels.
+**Expected result:**
 
-**Expected result:** The application resolves the ZIP code, retrieves hotels within five kilometers, and displays them in the results list and on the Leaflet map.
+The chatbot should retrieve saved nightly records, exclude the checkout date, check availability for all three nights, and calculate the total simulated cost.
 
-**Observed result:** The application resolved ZIP `16802` to State College, Pennsylvania, and returned **21 hotel results**. The hotel list displayed names, addresses, and distances, while the map displayed their markers and the five-kilometer radius.
+**Observed result:**
 
-Examples of returned hotels included Scholar Hotel State College, Hotel State College, Nittany Lion Inn, and Hyatt Place State College.
+The chatbot identified Scholar Hotel State College and calculated a total of **$111.00**.
 
-![Live hotel discovery results for ZIP 16802](docs/screenshots/assignment2-part1-live-results.png)
+The retrieved nightly records were:
 
-The number of hotels may change because the results come from a live API.
+| Date | Nightly Rate | Rooms Available |
+|---|---:|---:|
+| October 10, 2026 | $5.00 | 10 |
+| October 11, 2026 | $100.00 | 20 |
+| October 12, 2026 | $6.00 | 20 |
 
-### Hotel List and Map Synchronization
+The checkout date, October 13, was correctly excluded.
 
-**Action:** Select a hotel from the results list.
+The backend calculated 11,100 cents ($111.00), with no missing nights and rooms available on all three nights.
 
-**Expected result:** The corresponding marker becomes selected on the map.
+### Test 2 — RAG Verification Trace
 
-**Observed result:** Selecting a hotel from the list updated the selected map marker.
+**Expected result:**
 
-**Action:** Select a different hotel marker on the map.
+The application should demonstrate SQL generation, validation, SQLite retrieval, and a grounded final answer.
 
-**Expected result:** The corresponding hotel becomes selected in the list.
+**Observed result:**
 
-**Observed result:** Clicking a map marker updated the hotel selection in the list.
+The LLM generated a bounded SELECT query joining `saved_hotels`, `saved_hotel_locations`, and `demo_hotel_nights`.
 
-### Invalid ZIP Code
+The backend reported:
 
-**Action:** Enter `123`.
+`accepted: one bounded read-only SELECT over the saved-hotel allowlist`
 
-**Expected result:** The application rejects the input and displays an error explaining that a five-digit ZIP code is required.
+The query retrieved three nightly records for Scholar Hotel State College.
 
-**Observed result:** The application displayed the validation error instead of performing the hotel search.
+The verification trace reported:
 
-### Leading-Zero ZIP Code
+- `retrieved_record_count`: 3
+- `complete`: true
+- `available_for_entire_stay`: true
+- `missing_dates`: []
+- `total_cents`: 11100
 
-**Action:** Enter ZIP code `02108`.
+The final chatbot answer matched the retrieved records.
 
-**Expected result:** The application preserves the leading zero and searches for the correct ZIP code.
+The backend implementation and automated success test also confirmed two separate model requests: SQL generation followed by grounded answer generation.
 
-**Observed result:** The leading zero was preserved, and the application processed the ZIP code correctly.
+### Test 3 — No Matching Hotels
 
-### Unresolved ZIP Code
+**Question:**
 
-**Action:** Test a ZIP code that cannot be resolved.
+Do I have any saved hotels in ZIP code 99999?
 
-**Expected result:** The application displays a not-found message rather than showing incorrect hotel results.
+**Expected result:**
 
-**Observed result:** The application handled the unresolved ZIP code and displayed the appropriate error state.
+The chatbot should report that there are no matching saved hotels rather than inventing information.
 
-### No Nearby Hotels
+**Observed result:**
 
-**Action:** Test a valid response containing no hotel results.
+The chatbot returned a no-match response.
 
-**Expected result:** The application displays a clear message indicating that no nearby hotels were found.
+### Test 4 — SQL Security
 
-**Observed result:** The empty-results state worked during controlled testing.
+**Expected result:**
 
-### Geoapify Service Failure
+Dangerous SQL proposals should be rejected before execution without changing database records.
 
-**Action:** Test the application with a simulated provider failure.
+**Observed result:**
 
-**Expected result:** The application displays a service error instead of incorrectly reporting that no hotels exist.
+Automated tests used temporary SQLite databases and mocked model responses.
 
-**Observed result:** The application displayed the service-failure message during controlled testing.
+The tests submitted DELETE, UPDATE, DROP, multiple-statement, and unauthorized-table proposals through the RAG workflow.
 
-### Original Hotel Search
+All were rejected, and the saved-hotel count remained **3 before and 3 after** each attempt.
 
-**Action:** Search for `Harbor Lantern Hotel` using the original hotel search.
+Snapshots of saved hotels, ZIP associations, and nightly records also remained unchanged.
 
-**Expected result:** The existing sample-data hotel search continues working.
+These security tests did not execute malicious queries against my real application database.
 
-**Observed result:** The original search functionality still worked after the new hotel discovery feature was added.
+### Test 5 — Automated Tests
 
-### Automated Backend Tests
+The backend test suite passed **45 tests**, including **19 RAG tests**.
 
-I ran **22 backend tests**, and all passed.
+The tests covered SQL security, database retrieval, successful model interactions using mocks, and regression behavior.
 
-These tests covered ZIP code validation, exact ZIP matching, leading zeros, geocoding responses, hotel discovery, radius filtering, duplicate results, missing hotel data, and API error handling.
+The frontend production build also completed successfully.
 
-Some tests used mocked responses to verify failure conditions without depending on the live Geoapify service.
+These automated results are separate from the successful live-model question and manual browser observations.
 
-### Frontend Production Build
+**Fixed JSON test fixture:** [Hotel RAG Mock Responses](backend/tests/fixtures/hotel_rag_mock_responses.json)
 
-**Action:** Run `npm run build` from the frontend directory.
+To repeat the automated checks, activate the backend virtual environment and run:
 
-**Expected result:** Vite compiles the frontend without build errors.
+```bash
+python -m pytest -q
+```
 
-**Observed result:** The build completed successfully using Vite 8.3.5, transforming 16 modules in 129 milliseconds.
+The fixed JSON responses are test fixtures, not records retrieved from the live hotel provider.
 
-Vite displayed a configuration warning about future native configuration loading, but it did not prevent the build.
+## Demonstration Video
 
-## 7. Demonstration Video
+I recorded a demonstration of the Revised Assignment 2 Part 2 chatbot.
 
-I recorded a demonstration showing the hotel discovery feature and its interactions.
+**Video:** [Assignment 2 Part 2 RAG Chatbot Demonstration](https://drive.google.com/file/d/1JCLGy10HzZysT2J5TBvmnAOSSQUnCXtv/view?usp=sharing)
 
-**Video:** [Assignment 2 Part 1 — Hotel Discovery Demonstration](https://drive.google.com/file/d/1lTacqJzZnFjfLIifkLg4RHHcVb7d7zxm/view?usp=sharing)
+The demonstration is intended to provide evidence of the working chatbot, SQL verification trace, database retrieval, generated answer, and relevant tests.
 
-The demonstration covers searching for nearby hotels, viewing the results and map, synchronized hotel selection, and input handling.
+## AI Disclosure and Development Process
 
-## 8. AI Use and Development Process
+I used OpenAI ChatGPT (GPT-6) for implementation guidance, debugging, and verification planning.
 
-I used OpenAI ChatGPT (GPT-6) to help plan, implement, test, and troubleshoot parts of this assignment. I also used AI image generation to create the early interface mockup.
+I also used OpenAI Codex in VS Code Agent mode to inspect the repository, modify code, generate tests, and help implement the RAG workflow.
 
-Representative requests I made during development included:
+**Codex model version:** [Enter the exact model shown in your Codex session, if available.]
 
-- Helping create a FastAPI endpoint that uses Geoapify to resolve a U.S. ZIP code.
-- Expanding the ZIP lookup to retrieve hotels within five kilometers.
-- Developing tests for valid inputs, invalid ZIP codes, API errors, and hotel discovery.
-- Building a Vue component with a Leaflet map and synchronized hotel selection.
-- Troubleshooting frontend dependencies and verifying the production build.
+The application uses an OpenRouter-hosted LLM for SQL generation and grounded answering.
 
-An important revision occurred after I implemented the initial Geoapify demonstration. That version only looked up the fixed ZIP code `16802`. Although it confirmed that my API key and backend request were working, it did not provide a complete user-controlled hotel search.
+Representative coding-assistant instructions included:
 
-I expanded the implementation to accept any valid five-digit U.S. ZIP code, retrieve real nearby hotels, and display the results on the interactive map.
+- Implement a SQL-based RAG chatbot while preserving the existing Expedia Lite functionality.
+- Generate read-only SQL using an allowlisted SQLite schema.
+- Validate SQL before executing it and prevent unauthorized database modifications.
+- Send retrieved records to the LLM in a second request for grounded answering.
+- Test malicious SQL proposals against temporary databases and mocked model responses.
 
-I also encountered frontend dependency audit warnings. I updated the compatible dependencies, checked the application again, and successfully completed the production build.
+### Problems and Revisions
 
-I verified the generated implementation by running the backend tests, examining actual Geoapify results, and using the application in the browser. I did not rely only on the generated code or descriptions of expected behavior.
+During initial browser testing, the chatbot returned a Not Found error. I discovered that the running FastAPI backend did not expose the new chatbot endpoint and restarted the backend.
 
-## 9. Limitations and Conclusion
+After configuring the OpenRouter API key, the application returned an empty answer-service response. I used Codex to investigate and correct the model-response handling. After the correction, the chatbot returned a successful answer.
 
-The live hotel discovery feature depends on Geoapify and an active internet connection. Hotel results can change, and the API request uses a result limit, so the application may not display every hotel in a very densely populated area.
+I also expanded the SQL security tests to confirm that each rejected model-proposed query left saved hotel counts and associated records unchanged.
 
-The live discovery results include hotel information and locations, but they do not provide verified room availability, live pricing, or actual reservations.
+I checked the application using automated tests and live chatbot questions rather than assuming that generated code worked correctly.
 
-Those features are separate from the simulated booking system implemented in Assignment 1.
+## Limitations and Conclusion
 
-Overall, I completed the Assignment 2 Part 1 hotel discovery feature. Users can enter a ZIP code, retrieve nearby real hotels within five kilometers, and interact with the results through a synchronized list and Leaflet map.
+The chatbot can only answer based on the saved local hotel records. It does not provide exhaustive hotel coverage or real room availability.
 
-The feature was verified through live browser testing, automated backend tests, and a successful frontend production build.
+The nightly prices and room counts are simulated classroom data.
+
+The chatbot requires access to the selected LLM provider, whose free-model availability and request limits may change.
+
+Overall, I implemented and verified the complete RAG workflow required for Revised Assignment 2 Part 2: natural-language question, LLM-generated SQL, backend validation, SQLite retrieval, second LLM request, and grounded frontend answer.
