@@ -34,11 +34,23 @@ from controllers.hotel_rag_controller import (
     LLMInvalidResponseError,
     SQLRejectedError,
 )
+from controllers.pausepath_controller import (
+    PausePathRecommendationError,
+    create_session as create_pausepath_session,
+    delete_all_history as delete_pausepath_history,
+    delete_conversation as delete_pausepath_conversation,
+    delete_session as delete_pausepath_session,
+    get_history as get_pausepath_history,
+    get_preferences as get_pausepath_preferences,
+    recommend_skill as recommend_pausepath_skill,
+    save_conversation as save_pausepath_conversation,
+    set_simpler_view as set_pausepath_simpler_view,
+)
 
 
 initialize_database()
 
-app = FastAPI(title="Expedia Lite - Part 2")
+app = FastAPI(title="Expedia Lite and PausePath")
 
 app.add_middleware(
     CORSMiddleware,
@@ -65,6 +77,26 @@ class SavedHotelCreate(BaseModel):
 
 class HotelQuestion(BaseModel):
     question: str = Field(..., min_length=1, max_length=500)
+
+
+class PausePathSessionCreate(BaseModel):
+    skill_id: str = Field(..., min_length=1, max_length=20)
+    started_at: str = Field(..., min_length=1, max_length=50)
+    finished_at: str = Field(..., min_length=1, max_length=50)
+    duration_ms: int = Field(..., ge=0, le=3_600_000)
+    status: str = Field(..., min_length=1, max_length=20)
+
+
+class PausePathScenario(BaseModel):
+    scenario: str = Field(..., min_length=1, max_length=160)
+
+
+class PausePathConversationCreate(PausePathScenario):
+    skill_id: str = Field(..., min_length=1, max_length=20)
+
+
+class PausePathPreferenceUpdate(BaseModel):
+    simpler_view: bool
 
 
 @app.get("/")
@@ -183,6 +215,70 @@ def api_ask_saved_hotels(payload: HotelQuestion):
         raise HTTPException(status_code=422, detail=str(error)) from None
     except RagError as error:
         raise HTTPException(status_code=400, detail=str(error)) from None
+
+
+@app.post("/api/pausepath/sessions")
+def api_create_pausepath_session(payload: PausePathSessionCreate):
+    try:
+        return create_pausepath_session(payload.dict())
+    except ValueError as error:
+        raise HTTPException(status_code=422, detail=str(error)) from None
+
+
+@app.delete("/api/pausepath/sessions/{session_id}")
+def api_delete_pausepath_session(session_id: str):
+    try:
+        return delete_pausepath_session(session_id)
+    except ValueError as error:
+        raise HTTPException(status_code=404, detail=str(error)) from None
+
+
+@app.post("/api/pausepath/conversations")
+def api_save_pausepath_conversation(payload: PausePathConversationCreate):
+    try:
+        return save_pausepath_conversation(payload.scenario, payload.skill_id)
+    except ValueError as error:
+        raise HTTPException(status_code=422, detail=str(error)) from None
+
+
+@app.delete("/api/pausepath/conversations/{thread_id}")
+def api_delete_pausepath_conversation(thread_id: str):
+    try:
+        return delete_pausepath_conversation(thread_id)
+    except ValueError as error:
+        raise HTTPException(status_code=404, detail=str(error)) from None
+
+
+@app.get("/api/pausepath/history")
+def api_pausepath_history():
+    return get_pausepath_history()
+
+
+@app.delete("/api/pausepath/history")
+def api_delete_pausepath_history():
+    return delete_pausepath_history()
+
+
+@app.get("/api/pausepath/preferences")
+def api_pausepath_preferences():
+    return get_pausepath_preferences()
+
+
+@app.put("/api/pausepath/preferences")
+def api_set_pausepath_preferences(payload: PausePathPreferenceUpdate):
+    return set_pausepath_simpler_view(payload.simpler_view)
+
+
+@app.post("/api/pausepath/recommend")
+def api_pausepath_recommend(payload: PausePathScenario):
+    try:
+        return recommend_pausepath_skill(payload.scenario)
+    except ValueError as error:
+        raise HTTPException(status_code=422, detail=str(error)) from None
+    except PausePathRecommendationError as error:
+        raise HTTPException(status_code=503, detail=str(error)) from None
+
+
 @app.get("/api/demo/zip-location")
 def demo_zip_location():
     try:

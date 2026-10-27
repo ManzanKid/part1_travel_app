@@ -30,6 +30,41 @@ button:disabled {
   opacity: 0.55;
 }
 
+.app-shell {
+  min-height: 100vh;
+}
+
+.app-switcher {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  width: min(1180px, calc(100% - 40px));
+  margin: 18px auto 0;
+  border-bottom: 1px solid #dce2e9;
+  padding-bottom: 10px;
+}
+
+.app-switcher button {
+  min-height: 42px;
+  border: 1px solid #cbd4df;
+  border-radius: 9px;
+  padding: 9px 15px;
+  background: #fff;
+  color: #354256;
+  font-weight: 700;
+}
+
+.app-switcher button[aria-current="page"] {
+  border-color: #345c68;
+  background: #345c68;
+  color: #fff;
+}
+
+.app-switcher button:focus-visible {
+  outline: 3px solid rgba(45, 104, 167, 0.25);
+  outline-offset: 2px;
+}
+
 .page {
   width: min(1180px, calc(100% - 40px));
   margin: 0 auto;
@@ -235,6 +270,10 @@ tbody tr:hover {
 }
 
 @media (max-width: 760px) {
+  .app-switcher {
+    width: calc(100% - 24px);
+  }
+
   .page {
     width: min(100% - 24px, 1180px);
     padding-top: 28px;

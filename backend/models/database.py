@@ -1,16 +1,19 @@
 import csv
+import os
 import sqlite3
 from pathlib import Path
 
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 DATA_DIR = BASE_DIR / "data"
-DB_PATH = DATA_DIR / "expedia_lite.db"
+DB_PATH = Path(os.environ.get("EXPEDIA_LITE_DB_PATH", DATA_DIR / "expedia_lite.db")).expanduser()
 
 
-def get_connection():
-    """Open a connection to the Expedia Lite SQLite database."""
-    connection = sqlite3.connect(DB_PATH)
+def get_connection(db_path=None):
+    """Open a connection to the shared app database, optionally at a test path."""
+    path = Path(db_path or DB_PATH)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    connection = sqlite3.connect(path)
     connection.row_factory = sqlite3.Row
     connection.execute("PRAGMA foreign_keys = ON")
     return connection
@@ -92,6 +95,39 @@ CREATE TABLE IF NOT EXISTS saved_hotel_locations (
     longitude REAL NOT NULL CHECK (longitude BETWEEN -180 AND 180),
     PRIMARY KEY (hotel_id, postcode),
     FOREIGN KEY (hotel_id) REFERENCES saved_hotels(hotel_id) ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS pausepath_sessions (
+    session_id TEXT PRIMARY KEY,
+    skill_id TEXT NOT NULL CHECK (skill_id IN ('breathing', 'stop')),
+    started_at TEXT NOT NULL,
+    finished_at TEXT NOT NULL,
+    duration_ms INTEGER NOT NULL CHECK (duration_ms >= 0),
+    status TEXT NOT NULL CHECK (status IN ('completed', 'stopped')),
+    saved_at TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS pausepath_chat_threads (
+    thread_id TEXT PRIMARY KEY,
+    created_at TEXT NOT NULL,
+    skill_id TEXT NOT NULL CHECK (skill_id IN ('breathing', 'stop'))
+);
+
+CREATE TABLE IF NOT EXISTS pausepath_chat_messages (
+    message_id INTEGER PRIMARY KEY AUTOINCREMENT,
+    thread_id TEXT NOT NULL,
+    role TEXT NOT NULL CHECK (role IN ('user', 'assistant')),
+    content TEXT NOT NULL,
+    created_at TEXT NOT NULL,
+    FOREIGN KEY (thread_id)
+        REFERENCES pausepath_chat_threads(thread_id)
+        ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS pausepath_preferences (
+    preference_key TEXT PRIMARY KEY CHECK (preference_key = 'simpler_view'),
+    preference_value TEXT NOT NULL CHECK (preference_value IN ('true', 'false')),
+    updated_at TEXT NOT NULL
 );
 
 
@@ -211,7 +247,7 @@ def seed_database(connection):
 
 def initialize_database():
     """Create the database schema and load starter records once."""
-    DATA_DIR.mkdir(parents=True, exist_ok=True)
+    DB_PATH.parent.mkdir(parents=True, exist_ok=True)
 
     connection = get_connection()
 

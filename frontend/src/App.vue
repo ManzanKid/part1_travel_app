@@ -2,8 +2,11 @@
 import { onMounted, ref } from 'vue'
 import HotelDiscovery from './components/HotelDiscovery.vue'
 import HotelChatbot from './components/HotelChatbot.vue'
+import PausePath from './components/PausePath.vue'
 
 const API_URL = 'http://127.0.0.1:8000'
+const activeApp = ref('pausepath')
+const usersLoaded = ref(false)
 
 const hotelName = ref('')
 const results = ref([])
@@ -69,6 +72,7 @@ async function loadUsers() {
     const data = await response.json()
 
     users.value = data.users
+    usersLoaded.value = true
 
     if (users.value.length > 0) {
       selectedUserId.value = users.value[0].user_id
@@ -78,6 +82,11 @@ async function loadUsers() {
     console.error(error)
     actionMessage.value = 'Could not load demo travelers.'
   }
+}
+
+async function showExpedia() {
+  activeApp.value = 'expedia'
+  if (!usersLoaded.value) await loadUsers()
 }
 
 async function searchHotels() {
@@ -245,11 +254,27 @@ function formatRate(rate) {
   })
 }
 
-onMounted(loadUsers)
+onMounted(() => {
+  if (activeApp.value === 'expedia') loadUsers()
+})
 </script>
 
 <template>
-  <main class="page">
+  <div class="app-shell">
+    <nav class="app-switcher" aria-label="Choose application">
+      <button
+        type="button"
+        :aria-current="activeApp === 'expedia' ? 'page' : undefined"
+        @click="showExpedia"
+      >Expedia Lite</button>
+      <button
+        type="button"
+        :aria-current="activeApp === 'pausepath' ? 'page' : undefined"
+        @click="activeApp = 'pausepath'"
+      >PausePath</button>
+    </nav>
+
+  <main v-if="activeApp === 'expedia'" class="page">
     <header class="hero">
       <div>
         <p class="eyebrow">Travel booking demo</p>
@@ -500,4 +525,6 @@ onMounted(loadUsers)
       </div>
     </section>
   </main>
+  <PausePath v-else />
+  </div>
 </template>
