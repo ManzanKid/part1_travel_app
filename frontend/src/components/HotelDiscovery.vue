@@ -10,6 +10,10 @@ const errorMessage = ref('')
 const mapError = ref('')
 const location = ref(null)
 const hotels = ref([])
+const savedIds = ref(new Set())
+const pendingIds = ref(new Set())
+const feedback = ref('')
+const resultSource = ref('')
 const selectedHotelId = ref(null)
 const mapElement = ref(null)
 
@@ -43,6 +47,54 @@ function clearMap() {
 
 function hotelLabel(hotel) {
   return hotel.name || 'Name unavailable'
+}
+
+async function refreshSavedStatuses(items) {
+  const statuses = await Promise.all(items.map(async hotel => {
+    const response = await fetch(`/api/local/hotels/${encodeURIComponent(hotel.place_id)}/saved`)
+    if (!response.ok) throw new Error('Could not check saved hotel status.')
+    return [hotel.place_id, (await response.json()).saved]
+  }))
+  savedIds.value = new Set(statuses.filter(([, saved]) => saved).map(([id]) => id))
+}
+
+async function addLocal(hotel) {
+  if (savedIds.value.has(hotel.place_id) || pendingIds.value.has(hotel.place_id)) return
+  pendingIds.value = new Set([...pendingIds.value, hotel.place_id])
+  feedback.value = ''
+  try {
+    const response = await fetch('/api/local/hotels', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ hotel, postcode: location.value.postcode, location: location.value }),
+    })
+    const data = await response.json()
+    if (!response.ok) throw new Error(data.detail || 'Could not save this hotel locally.')
+    savedIds.value = new Set([...savedIds.value, hotel.place_id])
+    feedback.value = `${hotelLabel(hotel)} saved locally.`
+  } catch (error) {
+    feedback.value = error.message || 'Could not save this hotel locally.'
+  } finally {
+    const next = new Set(pendingIds.value); next.delete(hotel.place_id); pendingIds.value = next
+  }
+}
+
+async function removeLocal(hotel) {
+  feedback.value = ''
+  try {
+    const response = await fetch(`/api/local/hotels/${encodeURIComponent(hotel.place_id)}`, { method: 'DELETE' })
+    const data = await response.json()
+    if (!response.ok) throw new Error(data.detail || 'Could not remove this hotel.')
+    const next = new Set(savedIds.value); next.delete(hotel.place_id); savedIds.value = next
+    if (resultSource.value === 'Saved locally') {
+      hotels.value = hotels.value.filter(item => item.place_id !== hotel.place_id)
+      if (selectedHotelId.value === hotel.place_id) selectedHotelId.value = hotels.value[0]?.place_id || null
+      await nextTick()
+      drawMap()
+    }
+    feedback.value = `${hotelLabel(hotel)} removed from local storage.`
+  } catch (error) {
+    feedback.value = error.message || 'Could not remove this hotel.'
+  }
 }
 
 function distanceLabel(distance) {
@@ -169,6 +221,8 @@ async function findHotels() {
   selectedHotelId.value = null
   errorMessage.value = ''
   mapError.value = ''
+  feedback.value = ''
+  resultSource.value = ''
 
   if (!/^[0-9]{5}$/.test(postcode)) {
     errorMessage.value = 'Enter exactly five digits for a U.S. ZIP code.'
@@ -178,11 +232,17 @@ async function findHotels() {
   loading.value = true
 
   try {
-    const response = await fetch(
-      `/api/discovery/hotels?postcode=${encodeURIComponent(postcode)}`
-    )
-
-    const data = await response.json()
+    let response = await fetch(`/api/local/hotels?postcode=${encodeURIComponent(postcode)}`)
+    let data = await response.json()
+    if (!response.ok) throw new Error(data.detail || 'Could not check locally saved hotels.')
+    if (data.count > 0) {
+      location.value = data.location
+      hotels.value = data.hotels
+      resultSource.value = 'Saved locally'
+      await refreshSavedStatuses(hotels.value)
+    } else {
+      response = await fetch(`/api/discovery/hotels?postcode=${encodeURIComponent(postcode)}`)
+      data = await response.json()
 
     if (!response.ok) {
       throw new Error(
@@ -215,6 +275,9 @@ async function findHotels() {
 
     location.value = data.location
     hotels.value = data.hotels
+    resultSource.value = 'API results'
+    await refreshSavedStatuses(hotels.value)
+    }
 
     if (hotels.value.length > 0) {
       selectedHotelId.value = hotels.value[0].place_id
@@ -228,6 +291,10 @@ async function findHotels() {
       console.error('Map could not initialize:', mapFailure)
       clearMap()
       mapError.value = 'The map could not be displayed.'
+    }
+    if (resultSource.value === 'Saved locally') {
+      const nights = hotels.value.flatMap(hotel => hotel.nights || [])
+      if (nights.length) feedback.value = 'Rates, availability, and dates shown are simulated classroom data.'
     }
   } catch (error) {
     errorMessage.value =
@@ -279,6 +346,7 @@ onUnmounted(clearMap)
     <p v-if="errorMessage" role="alert" class="discovery-error">
       {{ errorMessage }}
     </p>
+    <p v-if="feedback" role="status" class="discovery-message">{{ feedback }}</p>
 
     <template v-if="location">
       <p class="discovery-summary">
@@ -286,7 +354,8 @@ onUnmounted(clearMap)
         <span v-if="location.locality">
           — {{ location.locality }}
         </span>
-        · {{ hotels.length }} hotel results within 5 km
+        · {{ resultSource === 'Saved locally' ? 'saved hotels associated with this ZIP' : `${hotels.length} hotel results within 5 km` }}
+        · {{ resultSource }}
       </p>
 
       <p v-if="hotels.length === 0" role="status">
@@ -297,7 +366,7 @@ onUnmounted(clearMap)
         <div class="discovery-list">
           <h3>Hotel results</h3>
 
-          <button
+          <div
             v-for="hotel in hotels"
             :key="hotel.place_id"
             type="button"
@@ -308,14 +377,29 @@ onUnmounted(clearMap)
             }"
             :data-place-id="hotel.place_id"
             :aria-pressed="selectedHotelId === hotel.place_id"
+            role="button"
+            tabindex="0"
             @click="selectHotel(hotel.place_id)"
+            @keydown.enter.prevent="selectHotel(hotel.place_id)"
+            @keydown.space.prevent="selectHotel(hotel.place_id)"
           >
             <strong>{{ hotelLabel(hotel) }}</strong>
             <span>
               {{ hotel.address || 'Address unavailable' }}
             </span>
             <small>{{ distanceLabel(hotel.distance_meters) }}</small>
-          </button>
+            <small v-if="hotel.nights?.length" class="simulated-data">Simulated classroom data</small>
+            <ul v-if="hotel.nights?.length" class="hotel-nights">
+              <li v-for="night in hotel.nights" :key="night.stay_date">
+                {{ night.stay_date }}: ${{ (night.nightly_rate_cents / 100).toFixed(2) }}/night · {{ night.rooms_available }} rooms
+              </li>
+            </ul>
+            <div class="local-actions" @click.stop>
+              <button v-if="!savedIds.has(hotel.place_id)" type="button" :disabled="pendingIds.has(hotel.place_id)" @click="addLocal(hotel)">{{ pendingIds.has(hotel.place_id) ? 'Saving...' : 'Add to Local' }}</button>
+              <button v-else type="button" @click="removeLocal(hotel)">Remove from Local</button>
+              <small v-if="savedIds.has(hotel.place_id)">Saved locally</small>
+            </div>
+          </div>
         </div>
 
         <div class="discovery-map-column">
@@ -427,6 +511,11 @@ onUnmounted(clearMap)
   border-radius: 10px;
   cursor: pointer;
 }
+
+.local-actions { display: flex; align-items: center; gap: 10px; }
+.local-actions button { width: fit-content; padding: 7px 10px; cursor: pointer; }
+.hotel-nights { margin: 0; padding-left: 20px; font-size: 0.9rem; }
+.simulated-data { font-weight: 600; }
 
 .discovery-hotel-button:hover {
   background: #eff6ff;

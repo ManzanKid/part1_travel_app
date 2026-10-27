@@ -57,6 +57,44 @@ def create_tables(connection):
             key TEXT PRIMARY KEY,
             value TEXT NOT NULL
         );
+
+CREATE TABLE IF NOT EXISTS saved_hotels (
+    hotel_id TEXT NOT NULL PRIMARY KEY,
+    name TEXT,
+    address TEXT,
+    latitude REAL NOT NULL CHECK (latitude BETWEEN -90 AND 90),
+    longitude REAL NOT NULL CHECK (longitude BETWEEN -180 AND 180)
+);
+
+CREATE TABLE IF NOT EXISTS demo_hotel_nights (
+    hotel_id TEXT NOT NULL,
+    stay_date TEXT NOT NULL CHECK (
+        stay_date GLOB '[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]'
+    ),
+    nightly_rate_cents INTEGER NOT NULL DEFAULT 10000
+        CHECK (typeof(nightly_rate_cents) = 'integer'
+               AND nightly_rate_cents >= 0),
+    rooms_available INTEGER NOT NULL DEFAULT 20
+        CHECK (typeof(rooms_available) = 'integer'
+               AND rooms_available >= 0),
+    PRIMARY KEY (hotel_id, stay_date),
+    FOREIGN KEY (hotel_id)
+        REFERENCES saved_hotels(hotel_id)
+        ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS saved_hotel_locations (
+    hotel_id TEXT NOT NULL,
+    postcode TEXT NOT NULL,
+    locality TEXT,
+    country_code TEXT NOT NULL DEFAULT 'us',
+    latitude REAL NOT NULL CHECK (latitude BETWEEN -90 AND 90),
+    longitude REAL NOT NULL CHECK (longitude BETWEEN -180 AND 180),
+    PRIMARY KEY (hotel_id, postcode),
+    FOREIGN KEY (hotel_id) REFERENCES saved_hotels(hotel_id) ON DELETE CASCADE
+);
+
+
         """
     )
 

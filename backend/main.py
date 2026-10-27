@@ -12,6 +12,10 @@ from controllers.database_controller import (
     create_booking,
     cancel_booking,
     delete_booking,
+    save_api_hotel,
+    get_saved_hotels,
+    remove_saved_hotel,
+    is_hotel_saved,
 )
 from controllers.geoapify_controller import (
     lookup_postcode,
@@ -41,6 +45,12 @@ app.add_middleware(
 class BookingCreate(BaseModel):
     user_id: str
     trip_id: str
+
+
+class SavedHotelCreate(BaseModel):
+    hotel: dict
+    postcode: str
+    location: dict
 
 
 @app.get("/")
@@ -108,6 +118,41 @@ def health():
         "status": "ok",
         "geoapify": geoapify_config_status()
     }
+
+
+@app.get("/api/local/hotels")
+def api_saved_hotels(postcode: str = Query(..., min_length=5, max_length=5)):
+    if not postcode.isdigit():
+        raise HTTPException(status_code=422, detail="Enter a valid five-digit U.S. ZIP code.")
+    hotels = get_saved_hotels(postcode)
+    if hotels:
+        first = hotels[0]
+        location = {"postcode": postcode, "locality": first["locality"], "country_code": first["country_code"], "latitude": first["location_latitude"], "longitude": first["location_longitude"]}
+    else:
+        location = None
+    return {"location": location, "count": len(hotels), "hotels": hotels}
+
+
+@app.post("/api/local/hotels")
+def api_save_hotel(payload: SavedHotelCreate):
+    try:
+        saved = save_api_hotel(payload.hotel, payload.postcode, payload.location)
+        return saved
+    except (ValueError, KeyError, TypeError) as error:
+        raise HTTPException(status_code=422, detail=str(error)) from None
+
+
+@app.delete("/api/local/hotels/{hotel_id}")
+def api_remove_hotel(hotel_id: str):
+    try:
+        return remove_saved_hotel(hotel_id)
+    except ValueError as error:
+        raise HTTPException(status_code=404, detail=str(error)) from None
+
+
+@app.get("/api/local/hotels/{hotel_id}/saved")
+def api_hotel_saved(hotel_id: str):
+    return {"saved": is_hotel_saved(hotel_id)}
 @app.get("/api/demo/zip-location")
 def demo_zip_location():
     try:

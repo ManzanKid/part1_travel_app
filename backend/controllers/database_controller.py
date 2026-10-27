@@ -3,6 +3,91 @@ from datetime import date
 from models.database import get_connection
 
 
+def save_api_hotel(hotel, postcode, location):
+    """Save a provider hotel, its searched ZIP context, and demo nights."""
+    hotel_id = str(hotel.get("place_id") or hotel.get("hotel_id") or "").strip()
+    if not hotel_id:
+        raise ValueError("Hotel provider ID is required.")
+    try:
+        latitude = float(hotel["latitude"])
+        longitude = float(hotel["longitude"])
+    except (KeyError, TypeError, ValueError):
+        raise ValueError("Hotel coordinates are required.") from None
+    if not (-90 <= latitude <= 90 and -180 <= longitude <= 180):
+        raise ValueError("Hotel coordinates are invalid.")
+    if not postcode or not postcode.isdigit() or len(postcode) != 5:
+        raise ValueError("A five-digit searched ZIP is required.")
+    connection = get_connection()
+    try:
+        connection.execute(
+            "INSERT OR IGNORE INTO saved_hotels (hotel_id, name, address, latitude, longitude) VALUES (?, ?, ?, ?, ?)",
+            (hotel_id, hotel.get("name"), hotel.get("address"), latitude, longitude),
+        )
+        connection.execute(
+            "INSERT OR IGNORE INTO saved_hotel_locations (hotel_id, postcode, locality, country_code, latitude, longitude) VALUES (?, ?, ?, ?, ?, ?)",
+            (hotel_id, postcode, location.get("locality"), location.get("country_code", "us"), float(location["latitude"]), float(location["longitude"])),
+        )
+        for day in range(10, 15):
+            connection.execute(
+                "INSERT OR IGNORE INTO demo_hotel_nights (hotel_id, stay_date) VALUES (?, ?)",
+                (hotel_id, f"2026-10-{day:02d}"),
+            )
+        connection.commit()
+        return {"place_id": hotel_id, "saved": True}
+    except Exception:
+        connection.rollback()
+        raise
+    finally:
+        connection.close()
+
+
+def get_saved_hotels(postcode):
+    connection = get_connection()
+    try:
+        hotels = connection.execute(
+            """SELECT h.hotel_id AS place_id, h.name, h.address, h.latitude, h.longitude,
+                      l.postcode, l.locality, l.country_code, l.latitude AS location_latitude,
+                      l.longitude AS location_longitude
+               FROM saved_hotels h JOIN saved_hotel_locations l ON l.hotel_id = h.hotel_id
+               WHERE l.postcode = ? ORDER BY h.name, h.hotel_id""", (postcode,)
+        ).fetchall()
+        result = []
+        for row in hotels:
+            hotel = dict(row)
+            hotel["distance_meters"] = None
+            hotel["nights"] = [dict(night) for night in connection.execute(
+                "SELECT stay_date, nightly_rate_cents, rooms_available FROM demo_hotel_nights WHERE hotel_id = ? ORDER BY stay_date",
+                (hotel["place_id"],),
+            ).fetchall()]
+            result.append(hotel)
+        return result
+    finally:
+        connection.close()
+
+
+def remove_saved_hotel(hotel_id):
+    connection = get_connection()
+    try:
+        cursor = connection.execute("DELETE FROM saved_hotels WHERE hotel_id = ?", (hotel_id,))
+        if not cursor.rowcount:
+            raise ValueError("Saved hotel does not exist.")
+        connection.commit()
+        return {"place_id": hotel_id, "deleted": True}
+    except Exception:
+        connection.rollback()
+        raise
+    finally:
+        connection.close()
+
+
+def is_hotel_saved(hotel_id):
+    connection = get_connection()
+    try:
+        return connection.execute("SELECT 1 FROM saved_hotels WHERE hotel_id = ?", (hotel_id,)).fetchone() is not None
+    finally:
+        connection.close()
+
+
 def search_hotels(hotel_name):
     """Search hotel stays by hotel name."""
     term = f"%{hotel_name.strip().lower()}%"
