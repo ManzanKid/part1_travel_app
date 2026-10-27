@@ -5,3 +5,7 @@ __pycache__/
 *.pyc
 .Rhistory
 backend/data/expedia_lite.db
+.env
+.env.*
+!.env.example
+frontend/dist/

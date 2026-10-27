@@ -1,5 +1,6 @@
 <script setup>
 import { onMounted, ref } from 'vue'
+import HotelDiscovery from './components/HotelDiscovery.vue'
 
 const API_URL = 'http://127.0.0.1:8000'
 
@@ -15,6 +16,51 @@ const historyMessage = ref('')
 const historyLoading = ref(false)
 
 const actionMessage = ref('')
+
+// Geoapify ZIP lookup demonstration
+const zipLocation = ref(null)
+const zipLoading = ref(false)
+const zipError = ref('')
+
+async function lookupDemoZip() {
+  if (zipLoading.value) return
+
+  zipLoading.value = true
+  zipLocation.value = null
+  zipError.value = ''
+
+  try {
+    // Vite proxy forwards /api requests to FastAPI.
+    const response = await fetch('/api/demo/zip-location')
+    const data = await response.json()
+
+    if (!response.ok) {
+      throw new Error(
+        typeof data.detail === 'string'
+          ? data.detail
+          : 'ZIP lookup failed.'
+      )
+    }
+
+    if (
+      data.postcode !== '16802' ||
+      data.country_code !== 'us' ||
+      !Number.isFinite(data.latitude) ||
+      !Number.isFinite(data.longitude)
+    ) {
+      throw new Error('The backend returned invalid location data.')
+    }
+
+    zipLocation.value = data
+  } catch (error) {
+    zipError.value =
+      error instanceof Error
+        ? error.message
+        : 'Could not look up the ZIP code.'
+  } finally {
+    zipLoading.value = false
+  }
+}
 
 async function loadUsers() {
   try {
@@ -306,10 +352,65 @@ onMounted(loadUsers)
       </div>
     </section>
 
+    <!-- Geoapify ZIP Lookup Demonstration -->
     <section class="panel">
       <div class="section-heading">
         <div>
-          <h2>Booking history</h2>
+          <h2>ZIP Lookup Demonstration</h2>
+          <p>
+            Retrieve the location for ZIP code 16802
+            through the FastAPI backend using Geoapify.
+          </p>
+        </div>
+      </div>
+
+      <button
+        type="button"
+        :disabled="zipLoading"
+        @click="lookupDemoZip"
+      >
+        {{ zipLoading ? 'Looking up...' : 'Look up ZIP 16802' }}
+      </button>
+
+      <p v-if="zipLoading" class="message" role="status">
+        Searching for location...
+      </p>
+
+      <p v-if="zipError" class="message" role="alert">
+        {{ zipError }}
+      </p>
+
+      <div v-if="zipLocation" class="zip-demo-result">
+        <h3>Location Found</h3>
+
+        <p>
+          <strong>ZIP Code:</strong>
+          {{ zipLocation.postcode }}
+        </p>
+
+        <p v-if="zipLocation.locality">
+          <strong>Locality:</strong>
+          {{ zipLocation.locality }}
+        </p>
+
+        <p>
+          <strong>Latitude:</strong>
+          {{ zipLocation.latitude }}
+        </p>
+
+        <p>
+          <strong>Longitude:</strong>
+          {{ zipLocation.longitude }}
+        </p>
+      </div>
+    </section>
+
+<HotelDiscovery />
+
+<section class="panel">
+  <div class="section-heading">
+    <div>
+      <h2>Booking history</h2>
           <p>
             Create, review, cancel, and delete simulated reservations.
           </p>

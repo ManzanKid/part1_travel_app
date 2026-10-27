@@ -8,8 +8,8 @@
   },
   "dependencies": {
     "@vitejs/plugin-vue": "latest",
+    "leaflet": "^1.9.4",
     "vite": "latest",
     "vue": "latest"
-  },
-  "devDependencies": {}
+  }
 }

@@ -1,6 +1,8 @@
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
+from config import geoapify_config_status
+from controllers.hotel_discovery_controller import discover_hotels
 
 from models.database import initialize_database
 from controllers.database_controller import (
@@ -10,6 +12,13 @@ from controllers.database_controller import (
     create_booking,
     cancel_booking,
     delete_booking,
+)
+from controllers.geoapify_controller import (
+    lookup_postcode,
+    ZipNotFoundError,
+    GeoapifyRequestError,
+    GeoapifyConfigurationError,
+      InvalidZipError,
 )
 
 
@@ -90,4 +99,63 @@ def api_delete_booking(booking_id: str):
     try:
         return delete_booking(booking_id)
     except ValueError as error:
-        raise HTTPException(status_code=404, detail=str(error))
+          raise HTTPException(status_code=404, detail=str(error))
+
+
+@app.get("/api/health")
+def health():
+    return {
+        "status": "ok",
+        "geoapify": geoapify_config_status()
+    }
+@app.get("/api/demo/zip-location")
+def demo_zip_location():
+    try:
+        return lookup_postcode("16802")
+
+    except GeoapifyConfigurationError:
+        raise HTTPException(
+            status_code=503,
+            detail="Location lookup is not configured"
+        ) from None
+
+    except ZipNotFoundError:
+     raise HTTPException(
+            status_code=404,
+            detail="ZIP code 16802 could not be resolved"
+        ) from None
+
+    except GeoapifyRequestError:
+        raise HTTPException(
+            status_code=502,
+            detail="Location lookup service is unavailable"
+        ) from None
+    
+@app.get("/api/discovery/hotels")
+def discover_nearby_hotels(postcode: str):
+    try:
+        return discover_hotels(postcode)
+
+    except InvalidZipError:
+        raise HTTPException(
+            status_code=422,
+            detail="Enter a valid five-digit U.S. ZIP code."
+        ) from None
+
+    except ZipNotFoundError:
+        raise HTTPException(
+            status_code=404,
+            detail="The requested U.S. ZIP code could not be resolved."
+        ) from None
+
+    except GeoapifyConfigurationError:
+        raise HTTPException(
+            status_code=503,
+            detail="Hotel discovery is not configured."
+        ) from None
+
+    except GeoapifyRequestError:
+        raise HTTPException(
+            status_code=502,
+            detail="Hotel discovery service is unavailable."
+        ) from None

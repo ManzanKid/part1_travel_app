@@ -51,3 +51,20 @@ From the project root:
 cd backend
 source .venv/bin/activate
 uvicorn main:app --reload --port 8000
+
+## Geoapify Configuration
+
+The Geoapify API key is stored in the `.env` file in the
+project root, alongside `frontend/` and `backend/`.
+
+The backend uses `python-dotenv` to load this configuration.
+
+The `.env` file is excluded from Git to protect the API key.
+
+After adding or changing the API key in `.env`, restart the
+FastAPI backend so it loads the updated configuration.
+
+The `/api/health` endpoint reports whether the key is configured
+without displaying the key itself.
+
+This configuration check does not make a Geoapify API request.
