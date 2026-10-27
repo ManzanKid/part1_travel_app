@@ -1,6 +1,7 @@
 <script setup>
 import { onMounted, ref } from 'vue'
 import HotelDiscovery from './components/HotelDiscovery.vue'
+import HotelChatbot from './components/HotelChatbot.vue'
 
 const API_URL = 'http://127.0.0.1:8000'
 
@@ -406,6 +407,8 @@ onMounted(loadUsers)
     </section>
 
 <HotelDiscovery />
+
+<HotelChatbot />
 
 <section class="panel">
   <div class="section-heading">

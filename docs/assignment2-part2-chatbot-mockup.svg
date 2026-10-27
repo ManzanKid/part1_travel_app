@@ -1,0 +1,64 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="1120" viewBox="0 0 1280 1120" role="img" aria-labelledby="title desc">
+  <title id="title">Expedia Lite with saved hotel assistant</title>
+  <desc id="desc">Early wireframe showing existing hotel search, ZIP discovery and map, then an accessible chatbot for saved local hotel questions.</desc>
+  <defs>
+    <style>
+      text { font-family: Inter, Arial, sans-serif; fill: #172033 }
+      .muted { fill: #657187 }
+      .small { font-size: 14px }
+      .label { font-size: 16px; font-weight: 700 }
+      .title { font-size: 30px; font-weight: 750 }
+      .h2 { font-size: 21px; font-weight: 700 }
+      .panel { fill: white; stroke: #dce3ec; stroke-width: 2 }
+      .line { stroke: #d7dee8; stroke-width: 2 }
+      .blue { fill: #173f5f }
+      .blueText { fill: white; font-weight: 700 }
+    </style>
+  </defs>
+  <rect width="1280" height="1120" fill="#f5f7fb"/>
+  <text x="70" y="48" class="small muted">TRAVEL BOOKING DEMO</text>
+  <text x="70" y="88" class="title">Expedia Lite</text>
+  <text x="70" y="117" class="small muted">Search stays, discover nearby hotels, and ask about hotels you saved locally.</text>
+
+  <rect x="70" y="145" width="1140" height="156" rx="16" class="panel"/>
+  <text x="100" y="183" class="h2">Find a stay</text>
+  <text x="100" y="213" class="small muted">Search the available trips by hotel name.</text>
+  <rect x="100" y="233" width="790" height="42" rx="8" fill="#fff" stroke="#ccd3df"/>
+  <text x="118" y="260" class="small muted">Try Harbor Lantern Hotel</text>
+  <rect x="910" y="233" width="160" height="42" rx="8" class="blue"/>
+  <text x="942" y="260" class="small blueText">Search Hotels</text>
+  <rect x="1084" y="175" width="94" height="35" rx="8" fill="#fff" stroke="#ccd3df"/>
+  <text x="1095" y="198" class="small">Traveler</text>
+
+  <rect x="70" y="320" width="1140" height="300" rx="16" class="panel"/>
+  <text x="100" y="360" class="h2">Discover nearby hotels</text>
+  <text x="100" y="387" class="small muted">ZIP search and synchronized hotel list/map remain here.</text>
+  <rect x="100" y="405" width="245" height="42" rx="8" fill="#fff" stroke="#ccd3df"/>
+  <text x="118" y="432" class="small muted">U.S. ZIP code  16802</text>
+  <rect x="360" y="405" width="135" height="42" rx="8" class="blue"/>
+  <text x="389" y="432" class="small blueText">Find Hotels</text>
+  <text x="100" y="480" class="label">Hotel results</text>
+  <rect x="100" y="495" width="485" height="96" rx="10" fill="#f8fafc" stroke="#ccd3df"/>
+  <text x="120" y="522" class="label">Saved locally / API results</text>
+  <text x="120" y="546" class="small muted">Hotel card with Add / Remove action and selection.</text>
+  <text x="120" y="570" class="small muted">Simulated rate and availability shown when saved.</text>
+  <rect x="610" y="405" width="570" height="186" rx="10" fill="#eaf1f7" stroke="#ccd3df"/>
+  <path d="M650 554 C735 500 800 560 875 480 S1025 510 1140 440" fill="none" stroke="#b7cbdc" stroke-width="5"/>
+  <circle cx="770" cy="510" r="11" fill="#2563eb"/><circle cx="925" cy="488" r="11" fill="#ea580c"/><circle cx="1060" cy="520" r="11" fill="#2563eb"/>
+  <text x="630" y="580" class="small muted">Leaflet selection and markers are unchanged.</text>
+
+  <rect x="70" y="640" width="1140" height="420" rx="16" class="panel"/>
+  <text x="100" y="681" class="h2">Ask about your saved hotels</text>
+  <text x="100" y="709" class="small muted">Answers use only your locally saved hotel and demo night records.</text>
+  <text x="100" y="753" class="label">Your question</text>
+  <rect x="100" y="768" width="900" height="54" rx="9" fill="#fff" stroke="#9daec2" stroke-width="2"/>
+  <text x="120" y="802" class="small muted">Which hotel has the lowest total cost for October 10–13?</text>
+  <rect x="1018" y="768" width="162" height="54" rx="9" class="blue"/>
+  <text x="1052" y="801" class="small blueText">Ask assistant</text>
+  <text x="100" y="850" class="small muted">Keyboard accessible · Loading and provider errors appear here when relevant.</text>
+  <rect x="100" y="874" width="1080" height="112" rx="10" fill="#f8fafc" stroke="#dce3ec"/>
+  <text x="122" y="906" class="label">Answer</text>
+  <text x="122" y="933" class="small">The lowest complete stay is Example Hotel at $300.00 for three nights.</text>
+  <text x="122" y="959" class="small muted">Rates and availability are simulated classroom data. Missing nights are not assumed available.</text>
+  <text x="100" y="1023" class="small muted">Optional bounded verification trace: question · proposed SQL · validation · retrieved rows · answer</text>
+</svg>

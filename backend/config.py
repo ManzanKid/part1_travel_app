@@ -19,3 +19,14 @@ def geoapify_config_status():
     return "key is not configured"
 def get_geoapify_api_key():
     return os.getenv("GEOAPIFY_API_KEY", "").strip()
+
+
+def get_openrouter_api_key():
+    """Return the backend-only OpenRouter credential."""
+    return os.getenv("OPENROUTER_API_KEY", "").strip()
+
+
+def get_openrouter_model():
+    """Return the configured model or the current free demo default."""
+    configured_model = os.getenv("OPENROUTER_MODEL", "").strip()
+    return configured_model or "nvidia/nemotron-3.5-lightning:free"

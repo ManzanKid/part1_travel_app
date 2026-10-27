@@ -1,0 +1,12 @@
+{
+  "fixture_type": "MOCKED OpenRouter responses; repeatable tests only, not live model integration",
+  "sql_proposal": {
+    "sql": "SELECT h.hotel_id AS hotel_id, h.name AS name, l.postcode AS postcode, n.stay_date AS stay_date, n.nightly_rate_cents AS nightly_rate_cents, n.rooms_available AS rooms_available FROM saved_hotels AS h JOIN saved_hotel_locations AS l ON l.hotel_id = h.hotel_id LEFT JOIN demo_hotel_nights AS n ON n.hotel_id = h.hotel_id AND n.stay_date >= '2026-10-10' AND n.stay_date < '2026-10-13' WHERE l.postcode = '02108' LIMIT 200",
+    "postcode": "02108",
+    "stay": {
+      "check_in": "2026-10-10",
+      "check_out": "2026-10-13"
+    }
+  },
+  "grounded_answer": "For 2026-10-10 through 2026-10-12, Sample Inn has a complete simulated classroom-data total of $300.00. Checkout on 2026-10-13 is excluded."
+}

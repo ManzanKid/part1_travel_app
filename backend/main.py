@@ -1,6 +1,7 @@
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
+from pydantic import Field
 from config import geoapify_config_status
 from controllers.hotel_discovery_controller import discover_hotels
 
@@ -23,6 +24,15 @@ from controllers.geoapify_controller import (
     GeoapifyRequestError,
     GeoapifyConfigurationError,
       InvalidZipError,
+)
+from controllers.hotel_rag_controller import (
+    ask_saved_hotels,
+    RagError,
+    RagConfigurationError,
+    LLMRateLimitError,
+    LLMProviderError,
+    LLMInvalidResponseError,
+    SQLRejectedError,
 )
 
 
@@ -51,6 +61,10 @@ class SavedHotelCreate(BaseModel):
     hotel: dict
     postcode: str
     location: dict
+
+
+class HotelQuestion(BaseModel):
+    question: str = Field(..., min_length=1, max_length=500)
 
 
 @app.get("/")
@@ -153,6 +167,22 @@ def api_remove_hotel(hotel_id: str):
 @app.get("/api/local/hotels/{hotel_id}/saved")
 def api_hotel_saved(hotel_id: str):
     return {"saved": is_hotel_saved(hotel_id)}
+
+
+@app.post("/api/chatbot/ask")
+def api_ask_saved_hotels(payload: HotelQuestion):
+    try:
+        return ask_saved_hotels(payload.question)
+    except RagConfigurationError as error:
+        raise HTTPException(status_code=503, detail=str(error)) from None
+    except LLMRateLimitError as error:
+        raise HTTPException(status_code=429, detail=str(error)) from None
+    except (LLMProviderError, LLMInvalidResponseError) as error:
+        raise HTTPException(status_code=502, detail=str(error)) from None
+    except SQLRejectedError as error:
+        raise HTTPException(status_code=422, detail=str(error)) from None
+    except RagError as error:
+        raise HTTPException(status_code=400, detail=str(error)) from None
 @app.get("/api/demo/zip-location")
 def demo_zip_location():
     try:
