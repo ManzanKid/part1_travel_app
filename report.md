@@ -3,7 +3,7 @@
 **Project:** PausePath  
 **Repository:** https://github.com/ManzanKid/part1_travel_app  
 **Branch:** `assignment3-part2`  
-**Commit:** Add final commit hash  
+**Commit:** 8a0aa7416363aaef1ecd401ea408251ad6d5d273 
 **Demo:** https://drive.google.com/file/d/10QLAyARm4mumzjwRjuboT2l5Cyjjpb8H/view?usp=sharing
 
 ## What I Built
